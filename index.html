@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>A.F.O.J - Battle Ground</title>
+    <title>A.F.O.J - Tactical Ground</title>
     <style>
         body { margin: 0; padding: 0; background: #070a13; overflow: hidden; font-family: 'Segoe UI', sans-serif; user-select: none; color: white; }
         canvas { display: block; margin: 0 auto; }
@@ -13,7 +13,8 @@
         .btn { padding: 15px 45px; font-size: 20px; font-weight: bold; color: white; background: #e67e22; border: none; border-radius: 5px; cursor: pointer; box-shadow: 0 5px 0 #d35400; transition: all 0.1s; }
         .btn:hover { background: #d35400; }
         .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #d35400; }
-        #hud { position: absolute; top: 20px; left: 20px; font-size: 18px; font-weight: bold; pointer-events: none; text-shadow: 2px 2px 4px #000; }
+        #hud { position: absolute; top: 20px; left: 20px; font-size: 18px; font-weight: bold; pointer-events: none; text-shadow: 2px 2px 4px #000; line-height: 1.5; }
+        #weapon-status { color: #5cc9ff; font-size: 14px; }
         #hp-container { width: 180px; height: 12px; background: #34495e; border-radius: 6px; overflow: hidden; margin-top: 5px; }
         #hp-bar { width: 100%; height: 100%; background: #2ecc71; }
         #gameOverScreen { display: none; }
@@ -22,20 +23,21 @@
 <body>
 
     <div id="hud">
-        A.F.O.J REVOLUTION<br>
-        Frags : <span id="score" style="color:#f1c40f">0</span>
+        A.F.O.J BATTLEGROUND<br>
+        Frags : <span id="score" style="color:#f1c40f">0</span><br>
+        <div id="weapon-status">Arme : Pistolet</div>
         <div id="hp-container"><div id="hp-bar"></div></div>
     </div>
 
     <div id="mainMenu" class="overlay">
         <h1>A.F.O.J</h1>
-        <p>BATTLEGROUNDS MOBILE & WEB</p>
-        <button class="btn" id="startBtn">READY TO DROP</button>
+        <p>LOCK AND LOAD</p>
+        <button class="btn" id="startBtn">DROP IN THE ZONE</button>
     </div>
 
     <div id="gameOverScreen" class="overlay">
-        <h1 style="color: #c0392b;">WIPED OUT</h1>
-        <h2 style="margin-bottom: 30px;">Survivants éliminés. Score : <span id="finalScore" style="color: #f1c40f;">0</span></h2>
+        <h1 style="color: #c0392b;">ELIMINÉ</h1>
+        <h2 style="margin-bottom: 30px;">Score final : <span id="finalScore" style="color: #f1c40f;">0</span></h2>
         <button class="btn" id="restartBtn">RE-DEPLOY</button>
     </div>
 
@@ -51,43 +53,57 @@
         let gameState = 'MENU';
         let score = 0;
         let spawnInterval = null;
+        let lootInterval = null;
         let mouseX = 0, mouseY = 0;
 
-        // --- CHARGEMENT DES ASSETS GRAPHIQUES (REAL TEXTURES) ---
+        // --- IMAGES ---
         const assets = {
             terrain: new Image(),
             soldier: new Image(),
-            bot: new Image()
+            bot: new Image(),
+            crate: new Image()
         };
 
-        // Images de remplacement orientées gaming/militaires
-        assets.terrain.src = 'https://img.freepik.com/vecteurs-libre/texture-sol-herbe-haut-jeu_1057-35711.jpg'; // Texture de terrain de combat (Herbe/Terre)
-        assets.soldier.src = 'https://cdn-icons-png.flaticon.com/512/8204/8204365.png'; // Commando équipé d'une arme (Vue du dessus)
-        assets.bot.src = 'https://cdn-icons-png.flaticon.com/512/8204/8204390.png'; // Ennemi mercenaire armé
+        assets.terrain.src = 'https://img.freepik.com/vecteurs-libre/texture-sol-herbe-haut-jeu_1057-35711.jpg';
+        assets.soldier.src = 'https://cdn-icons-png.flaticon.com/512/8204/8204365.png';
+        assets.bot.src = 'https://cdn-icons-png.flaticon.com/512/8204/8204390.png';
+        assets.crate.src = 'https://cdn-icons-png.flaticon.com/512/2873/2873330.png'; // Caisse d'armement
 
+        // --- ARTIFACTS DU JEU ---
         const player = {
             x: canvas.width / 2,
             y: canvas.height / 2,
-            size: 45, // Taille ajustée pour l'image du personnage
+            size: 45,
             speed: 5,
             hp: 100,
-            angle: 0
+            angle: 0,
+            weapon: 'Pistolet',
+            fireRate: 400, // Temps de recharge en ms
+            lastShot: 0
         };
 
         let bullets = [];
         let enemies = [];
-        const keys = {};
+        let obstacles = []; // Murs / Bâtiments
+        let loots = [];     // Caisses d'armes au sol
 
+        const keys = {};
         window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
         window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
-        
-        window.addEventListener('mousemove', e => {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-        });
+        window.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
 
         document.getElementById('startBtn').addEventListener('click', startGame);
         document.getElementById('restartBtn').addEventListener('click', startGame);
+
+        function generateMapElements() {
+            obstacles = [
+                { x: canvas.width * 0.25, y: canvas.height * 0.3, w: 120, h: 40 },
+                { x: canvas.width * 0.7, y: canvas.height * 0.2, w: 40, h: 150 },
+                { x: canvas.width * 0.45, y: canvas.height * 0.7, w: 160, h: 40 },
+                { x: canvas.width * 0.15, y: canvas.height * 0.75, w: 60, h: 60 }
+            ];
+            loots = [];
+        }
 
         function startGame() {
             document.getElementById('mainMenu').style.display = 'none';
@@ -96,40 +112,61 @@
             player.hp = 100;
             player.x = canvas.width / 2;
             player.y = canvas.height / 2;
+            player.weapon = 'Pistolet';
+            player.fireRate = 400;
+            document.getElementById('weapon-status').innerText = "Arme : Pistolet";
             bullets = [];
             enemies = [];
-            document.getElementById('score').innerText = score;
-            document.getElementById('hp-bar').style.width = '100%';
             
+            generateMapElements();
             gameState = 'PLAYING';
+
             if (spawnInterval) clearInterval(spawnInterval);
-            spawnInterval = setInterval(spawnEnemy, 1000);
+            spawnInterval = setInterval(spawnEnemy, 1200);
+
+            if (lootInterval) clearInterval(lootInterval);
+            lootInterval = setInterval(spawnLoot, 5000); // Une caisse toutes les 5s
+        }
+
+        function spawnLoot() {
+            if (gameState !== 'PLAYING' || loots.length >= 3) return;
+            const weaponsList = [
+                { name: 'M4A1 (Fusil d\'assaut)', fireRate: 120 },
+                { name: 'MP40 (Mitraillette)', fireRate: 80 },
+                { name: 'AWM (Sniper)', fireRate: 1000 }
+            ];
+            const chosen = weaponsList[Math.floor(Math.random() * weaponsList.length)];
+            loots.push({
+                x: 80 + Math.random() * (canvas.width - 160),
+                y: 80 + Math.random() * (canvas.height - 160),
+                size: 30,
+                weapon: chosen
+            });
         }
 
         function shoot(targetX, targetY) {
             if (gameState !== 'PLAYING') return;
+            const now = Date.now();
+            if (now - player.lastShot < player.fireRate) return; // Contrôle cadence de tir
+            player.lastShot = now;
+
             const angle = Math.atan2(targetY - player.y, targetX - player.x);
+            
+            // Comportement différent selon l'arme
+            let bSize = 4;
+            let bColor = '#f39c12';
+            if (player.weapon.includes('Sniper')) { bSize = 6; bColor = '#ef4444'; }
+
             bullets.push({
                 x: player.x,
                 y: player.y,
-                radius: 4,
-                color: '#f39c12',
-                velocity: { x: Math.cos(angle) * 12, y: Math.sin(angle) * 12 }
+                radius: bSize,
+                color: bColor,
+                velocity: { x: Math.cos(angle) * 14, y: Math.sin(angle) * 14 }
             });
         }
 
-        window.addEventListener('click', e => {
-            if(e.target.tagName !== 'BUTTON') shoot(e.clientX, e.clientY);
-        });
-
-        window.addEventListener('touchstart', e => {
-            if(e.target.tagName !== 'BUTTON') {
-                const touch = e.touches[0];
-                shoot(touch.clientX, touch.clientY);
-                player.x = touch.clientX;
-                player.y = touch.clientY;
-            }
-        });
+        window.addEventListener('click', e => { if(e.target.tagName !== 'BUTTON') shoot(e.clientX, e.clientY); });
 
         function spawnEnemy() {
             if (gameState !== 'PLAYING') return;
@@ -139,42 +176,78 @@
                 x: player.x + Math.cos(angle) * distance,
                 y: player.y + Math.sin(angle) * distance,
                 size: 40,
-                speed: 2 + Math.random() * 1.5,
+                speed: 1.8 + Math.random() * 1.2,
                 angle: 0
             });
+        }
+
+        // Vérification des collisions avec les structures du terrain
+        function checkObstacleCollision(x, y, radius) {
+            for (let obs of obstacles) {
+                if (x + radius > obs.x && x - radius < obs.x + obs.w &&
+                    y + radius > obs.y && y - radius < obs.y + obs.h) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         function update() {
             if (gameState !== 'PLAYING') return;
 
-            // Déplacement du Commando
-            if (keys['z'] || keys['w'] || keys['arrowup']) player.y -= player.speed;
-            if (keys['s'] || keys['arrowdown']) player.y += player.speed;
-            if (keys['q'] || keys['a'] || keys['arrowleft']) player.x -= player.speed;
-            if (keys['d'] || keys['arrowright']) player.x += player.speed;
+            let nextX = player.x;
+            let nextY = player.y;
 
-            // Rotation du joueur vers la cible/souris (comme Free Fire pour viser)
+            if (keys['z'] || keys['w'] || keys['arrowup']) nextY -= player.speed;
+            if (keys['s'] || keys['arrowdown']) nextY += player.speed;
+            if (keys['q'] || keys['a'] || keys['arrowleft']) nextX -= player.speed;
+            if (keys['d'] || keys['arrowright']) nextX += player.speed;
+
+            // Appliquer mouvement si pas de collision avec un mur
+            if (!checkObstacleCollision(nextX, player.y, player.size/3)) player.x = nextX;
+            if (!checkObstacleCollision(player.x, nextY, player.size/3)) player.y = nextY;
+
             player.angle = Math.atan2(mouseY - player.y, mouseX - player.x);
+
+            // Vérifier ramassage d'armes (Loot)
+            loots.forEach((loot, index) => {
+                if (Math.hypot(player.x - loot.x, player.y - loot.y) < player.size/2 + loot.size/2) {
+                    player.weapon = loot.weapon.name;
+                    player.fireRate = loot.weapon.fireRate;
+                    document.getElementById('weapon-status').innerText = "Arme : " + player.weapon;
+                    loots.splice(index, 1);
+                }
+            });
 
             // Balles
             bullets.forEach((bullet, bIndex) => {
                 bullet.x += bullet.velocity.x;
                 bullet.y += bullet.velocity.y;
+
+                // Destruction de la balle si elle touche un mur
+                if (checkObstacleCollision(bullet.x, bullet.y, bullet.radius)) {
+                    bullets.splice(bIndex, 1);
+                    return;
+                }
+
                 if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
                     bullets.splice(bIndex, 1);
                 }
             });
 
-            // Ennemis (IA traqueuse)
+            // Ennemis
             enemies.forEach((enemy, eIndex) => {
                 enemy.angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
-                enemy.x += Math.cos(enemy.angle) * enemy.speed;
-                enemy.y += Math.sin(enemy.angle) * enemy.speed;
+                
+                let eNextX = enemy.x + Math.cos(enemy.angle) * enemy.speed;
+                let eNextY = enemy.y + Math.sin(enemy.angle) * enemy.speed;
 
-                // Collisions Balles / Ennemis
+                // Les ennemis contournent ou s'arrêtent face aux obstacles
+                if (!checkObstacleCollision(eNextX, enemy.y, enemy.size/3)) enemy.x = eNextX;
+                if (!checkObstacleCollision(enemy.x, eNextY, enemy.size/3)) enemy.y = eNextY;
+
                 bullets.forEach((bullet, bIndex) => {
-                    const dist = Math.hypot(bullet.x - enemy.x, bullet.y - enemy.y);
-                    if (dist < enemy.size / 2) {
+                    if (Math.hypot(bullet.x - enemy.x, bullet.y - enemy.y) < enemy.size / 2) {
                         enemies.splice(eIndex, 1);
                         bullets.splice(bIndex, 1);
                         score++;
@@ -182,14 +255,13 @@
                     }
                 });
 
-                // Collision Ennemi / Joueur
-                const distPlayer = Math.hypot(player.x - enemy.x, player.y - enemy.y);
-                if (distPlayer < (player.size / 2 + enemy.size / 2)) {
-                    player.hp -= 0.5;
+                if (Math.hypot(player.x - enemy.x, player.y - enemy.y) < (player.size/2 + enemy.size/2)) {
+                    player.hp -= 0.4;
                     document.getElementById('hp-bar').style.width = player.hp + '%';
                     if (player.hp <= 0) {
                         gameState = 'GAMEOVER';
                         clearInterval(spawnInterval);
+                        clearInterval(lootInterval);
                         document.getElementById('finalScore').innerText = score;
                         document.getElementById('gameOverScreen').style.display = 'flex';
                     }
@@ -198,38 +270,49 @@
         }
 
         function draw() {
-            // 1. DESSINER LE TERRAIN (Répétition de la texture du champ de bataille)
+            // Rendu terrain
             if (assets.terrain.complete) {
-                const pattern = ctx.createPattern(assets.terrain, 'repeat');
-                ctx.fillStyle = pattern;
+                ctx.fillStyle = ctx.createPattern(assets.terrain, 'repeat');
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             } else {
-                ctx.fillStyle = '#1e293b';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#1e293b'; ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
 
             if (gameState === 'PLAYING') {
-                // 2. DESSINER LES BALLES
-                bullets.forEach(bullet => {
-                    ctx.fillStyle = bullet.color;
-                    ctx.shadowBlur = 10;
-                    ctx.shadowColor = '#f39c12';
-                    ctx.beginPath();
-                    ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.shadowBlur = 0; // Réinitialisation
+                // Dessiner les obstacles (Murs de briques/Bâtiments tactiques)
+                ctx.fillStyle = '#475569';
+                ctx.strokeStyle = '#334155';
+                ctx.lineWidth = 4;
+                obstacles.forEach(obs => {
+                    ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+                    ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
                 });
 
-                // 3. DESSINER LE JOUEUR (Avec rotation de son corps et de son arme)
+                // Dessiner les caisses de Loot
+                loots.forEach(loot => {
+                    if (assets.crate.complete) {
+                        ctx.drawImage(assets.crate, loot.x - loot.size/2, loot.y - loot.size/2, loot.size, loot.size);
+                    } else {
+                        ctx.fillStyle = '#eab308'; ctx.fillRect(loot.x - 10, loot.y - 10, 20, 20);
+                    }
+                });
+
+                // Balles
+                bullets.forEach(bullet => {
+                    ctx.fillStyle = bullet.color;
+                    ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2); ctx.fill();
+                });
+
+                // Joueur
                 if (assets.soldier.complete) {
                     ctx.save();
                     ctx.translate(player.x, player.y);
-                    ctx.rotate(player.angle + Math.PI / 2); // Ajustement de l'orientation de l'image
+                    ctx.rotate(player.angle + Math.PI / 2);
                     ctx.drawImage(assets.soldier, -player.size / 2, -player.size / 2, player.size, player.size);
                     ctx.restore();
                 }
 
-                // 4. DESSINER LES ENNEMIS ARMÉS
+                // Ennemis
                 enemies.forEach(enemy => {
                     if (assets.bot.complete) {
                         ctx.save();
@@ -242,17 +325,11 @@
             }
         }
 
-        function gameLoop() {
-            update();
-            draw();
-            requestAnimationFrame(gameLoop);
-        }
-
+        function gameLoop() { update(); draw(); requestAnimationFrame(gameLoop); }
         gameLoop();
 
         window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
         });
     </script>
 </body>
