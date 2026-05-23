@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>A.F.O.J - Battle Royale</title>
+    <style>
+        body { margin: 0; padding: 0; background: #111; overflow: hidden; font-family: sans-serif; }
+        canvas { display: block; margin: 0 auto; background: #2c3e50; }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="ui">A.F.O.J Alpha - Mode: Survie</div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Adaptation à l'écran du téléphone ou PC
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Propriétés du joueur
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 15,
+            color: '#e74c3c',
+            speed: 5
+        };
+
+        // Gestion des touches (Clavier/Tactile virtuel)
+        const keys = {};
+        window.addEventListener('keydown', e => keys[e.key] = true);
+        window.addEventListener('keyup', e => keys[e.key] = false);
+
+        // Joystick virtuel simple pour Android
+        window.addEventListener('touchmove', e => {
+            let touch = e.touches[0];
+            player.x = touch.clientX;
+            player.y = touch.clientY;
+        });
+
+        function update() {
+            // Déplacements ZQSD / Flèches
+            if (keys['z'] || keys['ArrowUp']) player.y -= player.speed;
+            if (keys['s'] || keys['ArrowDown']) player.y += player.speed;
+            if (keys['q'] || keys['ArrowLeft']) player.x -= player.speed;
+            if (keys['d'] || keys['ArrowRight']) player.x += player.speed;
+
+            // Limites de la carte
+            if (player.x < player.radius) player.x = player.radius;
+            if (player.x > canvas.width - player.radius) player.x = canvas.width - player.radius;
+            if (player.y < player.radius) player.y = player.radius;
+            if (player.y > canvas.height - player.radius) player.y = canvas.height - player.radius;
+        }
+
+        function draw() {
+            // Effacer l'écran
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Dessiner la zone de sécurité (Cercle qui rétrécit - Concept Battle Royale)
+            ctx.strokeStyle = '#f1c40f';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, canvas.width / 3, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Dessiner le joueur
+            ctx.fillStyle = player.color;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
