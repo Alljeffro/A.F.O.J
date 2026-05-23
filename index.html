@@ -3,70 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>A.F.O.J - Battle Arena</title>
+    <title>A.F.O.J - Battle Ground</title>
     <style>
-        body { margin: 0; padding: 0; background: #0f172a; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; color: white; }
-        canvas { display: block; margin: 0 auto; background: #1e293b; }
-        
-        /* Interfaces UI Overlay */
-        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(15, 23, 42, 0.95); z-index: 10; }
-        h1 { font-size: 48px; margin-bottom: 10px; letter-spacing: 4px; color: #38bdf8; text-shadow: 0 0 20px rgba(56, 189, 248, 0.5); }
-        p { color: #94a3b8; margin-bottom: 30px; }
-        
-        /* Grille des Skins */
-        .skin-selector { display: flex; gap: 15px; margin-bottom: 40px; }
-        .skin-option { width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: 4px solid transparent; transition: transform 0.2s, border-color 0.2s; }
-        .skin-option:hover { transform: scale(1.1); }
-        .skin-option.selected { border-color: #ffffff; transform: scale(1.15); box-shadow: 0 0 15px rgba(255,255,255,0.6); }
-
-        /* Boutons */
-        .btn { padding: 15px 40px; font-size: 20px; font-weight: bold; color: white; background: #0284c7; border: none; border-radius: 8px; cursor: pointer; transition: background 0.2s, transform 0.1s; }
-        .btn:hover { background: #0369a1; transform: translateY(-2px); }
-        .btn:active { transform: translateY(0); }
-
-        /* HUD en jeu */
-        #hud { position: absolute; top: 20px; left: 20px; font-size: 18px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); display: none; pointer-events: none; line-height: 1.6; }
-        #hud span { color: #38bdf8; }
-        #hp-bar-container { width: 200px; height: 15px; background: #475569; border-radius: 10px; overflow: hidden; margin-top: 5px; border: 2px solid #0f172a; }
-        #hp-bar { width: 100%; height: 100%; background: #22c55e; transition: width 0.1s; }
-        #zone-timer { color: #f43f5e !important; }
-
-        /* Écran Game Over */
+        body { margin: 0; padding: 0; background: #070a13; overflow: hidden; font-family: 'Segoe UI', sans-serif; user-select: none; color: white; }
+        canvas { display: block; margin: 0 auto; }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(7, 10, 19, 0.95); z-index: 10; }
+        h1 { font-size: 50px; margin-bottom: 5px; color: #f39c12; text-shadow: 0 0 20px rgba(243, 156, 18, 0.4); font-weight: 900; }
+        p { color: #7f8c8d; margin-bottom: 30px; letter-spacing: 1px; }
+        .btn { padding: 15px 45px; font-size: 20px; font-weight: bold; color: white; background: #e67e22; border: none; border-radius: 5px; cursor: pointer; box-shadow: 0 5px 0 #d35400; transition: all 0.1s; }
+        .btn:hover { background: #d35400; }
+        .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #d35400; }
+        #hud { position: absolute; top: 20px; left: 20px; font-size: 18px; font-weight: bold; pointer-events: none; text-shadow: 2px 2px 4px #000; }
+        #hp-container { width: 180px; height: 12px; background: #34495e; border-radius: 6px; overflow: hidden; margin-top: 5px; }
+        #hp-bar { width: 100%; height: 100%; background: #2ecc71; }
         #gameOverScreen { display: none; }
-        #deathMessage { color: #94a3b8; margin-bottom: 20px; font-style: italic; }
     </style>
 </head>
 <body>
 
-    <!-- HUD en jeu -->
     <div id="hud">
-        A.F.O.J | Éliminations: <span id="score">0</span><br>
-        Zone : <span id="zone-timer">Stable</span>
-        <div id="hp-bar-container"><div id="hp-bar"></div></div>
+        A.F.O.J REVOLUTION<br>
+        Frags : <span id="score" style="color:#f1c40f">0</span>
+        <div id="hp-container"><div id="hp-bar"></div></div>
     </div>
 
-    <!-- Menu Principal -->
     <div id="mainMenu" class="overlay">
         <h1>A.F.O.J</h1>
-        <p>Sélectionne ton Skin et rejoins l'arène</p>
-        
-        <div class="skin-selector">
-            <div class="skin-option selected" style="background: #38bdf8;" data-color="#38bdf8"></div>
-            <div class="skin-option" style="background: #ec4899;" data-color="#ec4899"></div>
-            <div class="skin-option" style="background: #22c55e;" data-color="#22c55e"></div>
-            <div class="skin-option" style="background: #eab308;" data-color="#eab308"></div>
-            <div class="skin-option" style="background: #a855f7;" data-color="#a855f7"></div>
-        </div>
-
-        <button class="btn" id="startBtn">LANCER LA PARTIE</button>
+        <p>BATTLEGROUNDS MOBILE & WEB</p>
+        <button class="btn" id="startBtn">READY TO DROP</button>
     </div>
 
-    <!-- Écran Game Over -->
     <div id="gameOverScreen" class="overlay">
-        <h1 style="color: #ef4444; text-shadow: 0 0 20px rgba(239, 68, 68, 0.5);">ELIMINÉ</h1>
-        <p id="deathMessage">Tu n'as pas survécu.</p>
-        <h2 style="margin-bottom: 40px;">Score final : <span id="finalScore" style="color: #eab308;">0</span></h2>
-        <button class="btn" id="restartBtn">REJOUER</button>
+        <h1 style="color: #c0392b;">WIPED OUT</h1>
+        <h2 style="margin-bottom: 30px;">Survivants éliminés. Score : <span id="finalScore" style="color: #f1c40f;">0</span></h2>
+        <button class="btn" id="restartBtn">RE-DEPLOY</button>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -81,109 +51,59 @@
         let gameState = 'MENU';
         let score = 0;
         let spawnInterval = null;
-        let zoneInterval = null;
+        let mouseX = 0, mouseY = 0;
 
-        // Le Joueur
+        // --- CHARGEMENT DES ASSETS GRAPHIQUES (REAL TEXTURES) ---
+        const assets = {
+            terrain: new Image(),
+            soldier: new Image(),
+            bot: new Image()
+        };
+
+        // Images de remplacement orientées gaming/militaires
+        assets.terrain.src = 'https://img.freepik.com/vecteurs-libre/texture-sol-herbe-haut-jeu_1057-35711.jpg'; // Texture de terrain de combat (Herbe/Terre)
+        assets.soldier.src = 'https://cdn-icons-png.flaticon.com/512/8204/8204365.png'; // Commando équipé d'une arme (Vue du dessus)
+        assets.bot.src = 'https://cdn-icons-png.flaticon.com/512/8204/8204390.png'; // Ennemi mercenaire armé
+
         const player = {
             x: canvas.width / 2,
             y: canvas.height / 2,
-            radius: 15,
-            color: '#38bdf8',
-            speed: 4,
+            size: 45, // Taille ajustée pour l'image du personnage
+            speed: 5,
             hp: 100,
-            maxHp: 100
-        };
-
-        // La Zone de Sécurité (Battle Royale)
-        const zone = {
-            x: canvas.width / 2,
-            y: canvas.height / 2,
-            currentRadius: Math.max(canvas.width, canvas.height) * 0.8,
-            targetRadius: Math.max(canvas.width, canvas.height) * 0.8,
-            shrinkSpeed: 0.5,
-            isShrinking: false,
-            timer: 15 // Temps avant rétrécissement
+            angle: 0
         };
 
         let bullets = [];
         let enemies = [];
-
         const keys = {};
+
         window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
         window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
-
-        const skinOptions = document.querySelectorAll('.skin-option');
-        skinOptions.forEach(option => {
-            option.addEventListener('click', () => {
-                skinOptions.forEach(opt => opt.classList.remove('selected'));
-                option.classList.add('selected');
-                player.color = option.getAttribute('data-color');
-            });
+        
+        window.addEventListener('mousemove', e => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
         });
 
         document.getElementById('startBtn').addEventListener('click', startGame);
-        document.getElementById('restartBtn').addEventListener('click', returnToMenu);
+        document.getElementById('restartBtn').addEventListener('click', startGame);
 
         function startGame() {
             document.getElementById('mainMenu').style.display = 'none';
             document.getElementById('gameOverScreen').style.display = 'none';
-            document.getElementById('hud').style.display = 'block';
-            
             score = 0;
             player.hp = 100;
-            document.getElementById('score').innerText = score;
-            document.getElementById('hp-bar').style.width = '100%';
-            document.getElementById('hp-bar').style.background = '#22c55e';
-            
-            bullets = [];
-            enemies = [];
             player.x = canvas.width / 2;
             player.y = canvas.height / 2;
-
-            // Réinitialisation Zone
-            zone.currentRadius = Math.max(canvas.width, canvas.height) * 0.6;
-            zone.targetRadius = zone.currentRadius;
-            zone.timer = 15;
-            zone.isShrinking = false;
-            document.getElementById('zone-timer').innerText = "Rétrécit dans " + zone.timer + "s";
-
+            bullets = [];
+            enemies = [];
+            document.getElementById('score').innerText = score;
+            document.getElementById('hp-bar').style.width = '100%';
+            
             gameState = 'PLAYING';
-
             if (spawnInterval) clearInterval(spawnInterval);
             spawnInterval = setInterval(spawnEnemy, 1000);
-
-            if (zoneInterval) clearInterval(zoneInterval);
-            zoneInterval = setInterval(manageZoneTimer, 1000);
-        }
-
-        function returnToMenu() {
-            document.getElementById('gameOverScreen').style.display = 'none';
-            document.getElementById('mainMenu').style.display = 'flex';
-            gameState = 'MENU';
-        }
-
-        function manageZoneTimer() {
-            if (gameState !== 'PLAYING') return;
-            
-            if (!zone.isShrinking) {
-                zone.timer--;
-                document.getElementById('zone-timer').innerText = "Rétrécit dans " + zone.timer + "s";
-                if (zone.timer <= 0) {
-                    zone.isShrinking = true;
-                    zone.targetRadius = zone.currentRadius * 0.6; // Réduit la zone de 40%
-                    document.getElementById('zone-timer').innerText = "⚠️ DANGER ! RETRECISSEMENT";
-                }
-            }
-        }
-
-        function triggerGameOver(reason) {
-            gameState = 'GAMEOVER';
-            clearInterval(spawnInterval);
-            clearInterval(zoneInterval);
-            document.getElementById('hud').style.display = 'none';
-            document.getElementById('finalScore').innerText = score;
-            document.getElementById('deathMessage').innerText = reason;
-            document.getElementById('gameOverScreen').style.display = 'flex';
         }
 
         function shoot(targetX, targetY) {
@@ -193,19 +113,17 @@
                 x: player.x,
                 y: player.y,
                 radius: 4,
-                color: '#fde047',
-                velocity: { x: Math.cos(angle) * 9, y: Math.sin(angle) * 9 }
+                color: '#f39c12',
+                velocity: { x: Math.cos(angle) * 12, y: Math.sin(angle) * 12 }
             });
         }
 
         window.addEventListener('click', e => {
-            if(e.target.tagName !== 'BUTTON' && !e.target.classList.contains('skin-option')) {
-                shoot(e.clientX, e.clientY);
-            }
+            if(e.target.tagName !== 'BUTTON') shoot(e.clientX, e.clientY);
         });
 
         window.addEventListener('touchstart', e => {
-            if(e.target.tagName !== 'BUTTON' && !e.target.classList.contains('skin-option')) {
+            if(e.target.tagName !== 'BUTTON') {
                 const touch = e.touches[0];
                 shoot(touch.clientX, touch.clientY);
                 player.x = touch.clientX;
@@ -215,84 +133,48 @@
 
         function spawnEnemy() {
             if (gameState !== 'PLAYING') return;
-            
-            // Apparition des ennemis aléatoirement mais TOUJOURS à l'intérieur de la zone active
             const angle = Math.random() * Math.PI * 2;
-            const distance = Math.random() * zone.currentRadius;
-            const x = zone.x + Math.cos(angle) * distance;
-            const y = zone.y + Math.sin(angle) * distance;
-
-            // Éviter de spawn directement sur le joueur
-            if (Math.hypot(player.x - x, player.y - y) > 150) {
-                enemies.push({
-                    x: x,
-                    y: y,
-                    radius: 12,
-                    color: '#ef4444',
-                    speed: 1.5 + Math.random() * 1.2
-                });
-            }
+            const distance = Math.max(canvas.width, canvas.height) * 0.6;
+            enemies.push({
+                x: player.x + Math.cos(angle) * distance,
+                y: player.y + Math.sin(angle) * distance,
+                size: 40,
+                speed: 2 + Math.random() * 1.5,
+                angle: 0
+            });
         }
 
         function update() {
             if (gameState !== 'PLAYING') return;
 
-            // Mouvements Joueur
+            // Déplacement du Commando
             if (keys['z'] || keys['w'] || keys['arrowup']) player.y -= player.speed;
             if (keys['s'] || keys['arrowdown']) player.y += player.speed;
             if (keys['q'] || keys['a'] || keys['arrowleft']) player.x -= player.speed;
             if (keys['d'] || keys['arrowright']) player.x += player.speed;
 
-            // Restreindre le joueur aux limites physiques de l'écran écran
-            if (player.x < player.radius) player.x = player.radius;
-            if (player.x > canvas.width - player.radius) player.x = canvas.width - player.radius;
-            if (player.y < player.radius) player.y = player.radius;
-            if (player.y > canvas.height - player.radius) player.y = canvas.height - player.radius;
-
-            // GESTION DE LA ZONE DE SÉCURITÉ
-            if (zone.isShrinking) {
-                if (zone.currentRadius > zone.targetRadius) {
-                    zone.currentRadius -= zone.shrinkSpeed;
-                } else {
-                    zone.isShrinking = false;
-                    zone.timer = 12; // Temps d'attente avant prochaine réduction
-                    document.getElementById('zone-timer').innerText = "Rétrécit dans " + zone.timer + "s";
-                }
-            }
-
-            // Vérifier si le joueur est hors zone
-            const distToZoneCenter = Math.hypot(player.x - zone.x, player.y - zone.y);
-            if (distToZoneCenter > zone.currentRadius) {
-                player.hp -= 0.3; // Dégâts continus du gaz
-                document.getElementById('hp-bar').style.background = '#ef4444';
-                if (player.hp <= 0) {
-                    triggerGameOver("Tu as succombé au gaz toxique hors de la zone !");
-                }
-            } else {
-                document.getElementById('hp-bar').style.background = '#22c55e';
-            }
-            // Update graphique barre de vie
-            document.getElementById('hp-bar').style.width = Math.max(0, player.hp) + '%';
+            // Rotation du joueur vers la cible/souris (comme Free Fire pour viser)
+            player.angle = Math.atan2(mouseY - player.y, mouseX - player.x);
 
             // Balles
-            bullets.forEach((bullet, index) => {
+            bullets.forEach((bullet, bIndex) => {
                 bullet.x += bullet.velocity.x;
                 bullet.y += bullet.velocity.y;
                 if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
-                    bullets.splice(index, 1);
+                    bullets.splice(bIndex, 1);
                 }
             });
 
-            // Ennemis
+            // Ennemis (IA traqueuse)
             enemies.forEach((enemy, eIndex) => {
-                const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
-                enemy.x += Math.cos(angle) * enemy.speed;
-                enemy.y += Math.sin(angle) * enemy.speed;
+                enemy.angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+                enemy.x += Math.cos(enemy.angle) * enemy.speed;
+                enemy.y += Math.sin(enemy.angle) * enemy.speed;
 
-                // Collision Balle / Ennemi
+                // Collisions Balles / Ennemis
                 bullets.forEach((bullet, bIndex) => {
                     const dist = Math.hypot(bullet.x - enemy.x, bullet.y - enemy.y);
-                    if (dist - enemy.radius - bullet.radius < 1) {
+                    if (dist < enemy.size / 2) {
                         enemies.splice(eIndex, 1);
                         bullets.splice(bIndex, 1);
                         score++;
@@ -302,55 +184,60 @@
 
                 // Collision Ennemi / Joueur
                 const distPlayer = Math.hypot(player.x - enemy.x, player.y - enemy.y);
-                if (distPlayer - enemy.radius - player.radius < 1) {
-                    triggerGameOver("Tu as été éliminé par les forces ennemies.");
+                if (distPlayer < (player.size / 2 + enemy.size / 2)) {
+                    player.hp -= 0.5;
+                    document.getElementById('hp-bar').style.width = player.hp + '%';
+                    if (player.hp <= 0) {
+                        gameState = 'GAMEOVER';
+                        clearInterval(spawnInterval);
+                        document.getElementById('finalScore').innerText = score;
+                        document.getElementById('gameOverScreen').style.display = 'flex';
+                    }
                 }
             });
         }
 
         function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // 1. DESSINER LE TERRAIN (Répétition de la texture du champ de bataille)
+            if (assets.terrain.complete) {
+                const pattern = ctx.createPattern(assets.terrain, 'repeat');
+                ctx.fillStyle = pattern;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.fillStyle = '#1e293b';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
 
             if (gameState === 'PLAYING') {
-                // DESSIN DU GAZ DANGER (Tout l'extérieur de la zone)
-                ctx.fillStyle = 'rgba(244, 63, 94, 0.15)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                // Découpe de la zone de sécurité propre (Masque inverse)
-                ctx.globalCompositeOperation = 'destination-out';
-                ctx.fillStyle = 'rgba(0, 0, 0, 1)';
-                ctx.beginPath();
-                ctx.arc(zone.x, zone.y, zone.currentRadius, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.globalCompositeOperation = 'source-over';
-
-                // Bordure de la zone de sécurité (Ligne bleue)
-                ctx.strokeStyle = '#38bdf8';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.arc(zone.x, zone.y, zone.currentRadius, 0, Math.PI * 2);
-                ctx.stroke();
-
-                // Joueur
-                ctx.fillStyle = player.color;
-                ctx.beginPath();
-                ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Balles
+                // 2. DESSINER LES BALLES
                 bullets.forEach(bullet => {
                     ctx.fillStyle = bullet.color;
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#f39c12';
                     ctx.beginPath();
                     ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
                     ctx.fill();
+                    ctx.shadowBlur = 0; // Réinitialisation
                 });
 
-                // Ennemis
+                // 3. DESSINER LE JOUEUR (Avec rotation de son corps et de son arme)
+                if (assets.soldier.complete) {
+                    ctx.save();
+                    ctx.translate(player.x, player.y);
+                    ctx.rotate(player.angle + Math.PI / 2); // Ajustement de l'orientation de l'image
+                    ctx.drawImage(assets.soldier, -player.size / 2, -player.size / 2, player.size, player.size);
+                    ctx.restore();
+                }
+
+                // 4. DESSINER LES ENNEMIS ARMÉS
                 enemies.forEach(enemy => {
-                    ctx.fillStyle = enemy.color;
-                    ctx.beginPath();
-                    ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
-                    ctx.fill();
+                    if (assets.bot.complete) {
+                        ctx.save();
+                        ctx.translate(enemy.x, enemy.y);
+                        ctx.rotate(enemy.angle + Math.PI / 2);
+                        ctx.drawImage(assets.bot, -enemy.size / 2, -enemy.size / 2, enemy.size, enemy.size);
+                        ctx.restore();
+                    }
                 });
             }
         }
@@ -366,8 +253,6 @@
         window.addEventListener('resize', () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            zone.x = canvas.width / 2;
-            zone.y = canvas.height / 2;
         });
     </script>
 </body>
