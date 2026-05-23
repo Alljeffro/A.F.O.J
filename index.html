@@ -3,77 +3,177 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>A.F.O.J - Battle Royale</title>
+    <title>A.F.O.J - Battle Arena</title>
     <style>
-        body { margin: 0; padding: 0; background: #111; overflow: hidden; font-family: sans-serif; }
-        canvas { display: block; margin: 0 auto; background: #2c3e50; }
-        #ui { position: absolute; top: 10px; left: 10px; color: white; font-weight: bold; }
+        body { margin: 0; padding: 0; background: #111; overflow: hidden; font-family: sans-serif; user-select: none; }
+        canvas { display: block; margin: 0 auto; background: #273746; }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; font-weight: bold; font-size: 18px; text-shadow: 2px 2px 4px #000; }
     </style>
 </head>
 <body>
 
-    <div id="ui">A.F.O.J Alpha - Mode: Survie</div>
+    <div id="ui">A.F.O.J | Éliminations: <span id="score">0</span></div>
     <canvas id="gameCanvas"></canvas>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        // Adaptation à l'écran du téléphone ou PC
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
-        // Propriétés du joueur
+        let score = 0;
+
+        // Le Joueur
         const player = {
             x: canvas.width / 2,
             y: canvas.height / 2,
             radius: 15,
-            color: '#e74c3c',
-            speed: 5
+            color: '#3498db',
+            speed: 4
         };
 
-        // Gestion des touches (Clavier/Tactile virtuel)
-        const keys = {};
-        window.addEventListener('keydown', e => keys[e.key] = true);
-        window.addEventListener('keyup', e => keys[e.key] = false);
+        // Tableaux pour stocker les éléments mobiles
+        const bullets = [];
+        const enemies = [];
 
-        // Joystick virtuel simple pour Android
-        window.addEventListener('touchmove', e => {
-            let touch = e.touches[0];
+        // Gestion des touches clavier
+        const keys = {};
+        window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+        window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+        // --- SYSTÈME DE TIR ---
+        // Fonction pour créer une balle vers une cible (souris ou tap)
+        function shoot(targetX, targetY) {
+            const angle = Math.atan2(targetY - player.y, targetX - player.x);
+            bullets.push({
+                x: player.x,
+                y: player.y,
+                radius: 4,
+                color: '#f1c40f',
+                velocity: {
+                    x: Math.cos(angle) * 8,
+                    y: Math.sin(angle) * 8
+                }
+            });
+        }
+
+        // Tir au clic sur PC
+        window.addEventListener('click', e => {
+            shoot(e.clientX, e.clientY);
+        });
+
+        // Tir et déplacement simultané sur Mobile (Android)
+        window.addEventListener('touchstart', e => {
+            const touch = e.touches[0];
+            // Si on touche l'écran, on tire vers la zone touchée
+            shoot(touch.clientX, touch.clientY);
+            // Et on déplace brièvement le joueur vers cette direction pour simuler un joystick
             player.x = touch.clientX;
             player.y = touch.clientY;
         });
 
-        function update() {
-            // Déplacements ZQSD / Flèches
-            if (keys['z'] || keys['ArrowUp']) player.y -= player.speed;
-            if (keys['s'] || keys['ArrowDown']) player.y += player.speed;
-            if (keys['q'] || keys['ArrowLeft']) player.x -= player.speed;
-            if (keys['d'] || keys['ArrowRight']) player.x += player.speed;
+        // --- SYSTÈME D'ENNEMIS (BOTS) ---
+        function spawnEnemy() {
+            // Apparition aléatoire sur les bords de l'écran
+            let x, y;
+            if (Math.random() < 0.5) {
+                x = Math.random() < 0.5 ? 0 : canvas.width;
+                y = Math.random() * canvas.height;
+            } else {
+                x = Math.random() * canvas.width;
+                y = Math.random() < 0.5 ? 0 : canvas.height;
+            }
 
-            // Limites de la carte
-            if (player.x < player.radius) player.x = player.radius;
-            if (player.x > canvas.width - player.radius) player.x = canvas.width - player.radius;
-            if (player.y < player.radius) player.y = player.radius;
-            if (player.y > canvas.height - player.radius) player.y = canvas.height - player.radius;
+            enemies.push({
+                x: x,
+                y: y,
+                radius: 12,
+                color: '#e74c3c',
+                speed: 1.5 + Math.random() * 1.5 // Vitesses variables
+            });
         }
 
+        // Apparition d'un ennemi toutes les 1.5 secondes
+        setInterval(spawnEnemy, 1500);
+
+        // --- LOGIQUE DU JEU (MISE À JOUR) ---
+        function update() {
+            // Déplacements ZQSD / Flèches
+            if (keys['z'] || keys['w'] || keys['arrowup']) player.y -= player.speed;
+            if (keys['s'] || keys['arrowdown']) player.y += player.speed;
+            if (keys['q'] || keys['a'] || keys['arrowleft']) player.x -= player.speed;
+            if (keys['d'] || keys['arrowright']) player.x += player.speed;
+
+            // Mise à jour des balles
+            bullets.forEach((bullet, index) => {
+                bullet.x += bullet.velocity.x;
+                bullet.y += bullet.velocity.y;
+
+                // Supprimer les balles hors écran pour optimiser les performances
+                if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
+                    bullets.splice(index, 1);
+                }
+            });
+
+            // Mise à jour des ennemis
+            enemies.forEach((enemy, eIndex) => {
+                // Les ennemis traquent le joueur (IA simple)
+                const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+                enemy.x += Math.cos(angle) * enemy.speed;
+                enemy.y += Math.sin(angle) * enemy.speed;
+
+                // Gestion des collisions Balle / Ennemi
+                bullets.forEach((bullet, bIndex) => {
+                    const dist = Math.hypot(bullet.x - enemy.x, bullet.y - enemy.y);
+                    // Si la distance est inférieure à la somme des rayons, il y a impact
+                    if (dist - enemy.radius - bullet.radius < 1) {
+                        // Supprimer l'ennemi et la balle
+                        enemies.splice(eIndex, 1);
+                        bullets.splice(bIndex, 1);
+                        score++;
+                        document.getElementById('score').innerText = score;
+                    }
+                });
+
+                // Fin de partie si un ennemi touche le joueur
+                const distPlayer = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+                if (distPlayer - enemy.radius - player.radius < 1) {
+                    alert("GAME OVER ! Tu as fait " + score + " éliminations.");
+                    score = 0;
+                    document.getElementById('score').innerText = score;
+                    enemies.length = 0; // Vide la carte
+                    player.x = canvas.width / 2;
+                    player.y = canvas.height / 2;
+                }
+            });
+        }
+
+        // --- RENDU GRAPHIQUE ---
         function draw() {
-            // Effacer l'écran
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Dessiner la zone de sécurité (Cercle qui rétrécit - Concept Battle Royale)
-            ctx.strokeStyle = '#f1c40f';
-            ctx.lineWidth = 5;
-            ctx.beginPath();
-            ctx.arc(canvas.width / 2, canvas.height / 2, canvas.width / 3, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // Dessiner le joueur
+            // Dessiner le Joueur
             ctx.fillStyle = player.color;
             ctx.beginPath();
             ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
             ctx.fill();
+
+            // Dessiner les Balles
+            bullets.forEach(bullet => {
+                ctx.fillStyle = bullet.color;
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Dessiner les Ennemis
+            enemies.forEach(enemy => {
+                ctx.fillStyle = enemy.color;
+                ctx.beginPath();
+                ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
         }
 
         function gameLoop() {
@@ -83,6 +183,12 @@
         }
 
         gameLoop();
+
+        // Ajustement si l'écran change de taille (rotation mobile)
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
     </script>
 </body>
 </html>
