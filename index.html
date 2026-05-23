@@ -5,14 +5,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>A.F.O.J - Battle Arena</title>
     <style>
-        body { margin: 0; padding: 0; background: #111; overflow: hidden; font-family: sans-serif; user-select: none; }
-        canvas { display: block; margin: 0 auto; background: #273746; }
-        #ui { position: absolute; top: 10px; left: 10px; color: white; font-weight: bold; font-size: 18px; text-shadow: 2px 2px 4px #000; }
+        body { margin: 0; padding: 0; background: #0f172a; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; color: white; }
+        canvas { display: block; margin: 0 auto; background: #1e293b; }
+        
+        /* Interfaces UI Overlay */
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(15, 23, 42, 0.95); z-index: 10; }
+        h1 { font-size: 48px; margin-bottom: 10px; letter-spacing: 4px; color: #38bdf8; text-shadow: 0 0 20px rgba(56, 189, 248, 0.5); }
+        p { color: #94a3b8; margin-bottom: 30px; }
+        
+        /* Grille des Skins */
+        .skin-selector { display: flex; gap: 15px; margin-bottom: 40px; }
+        .skin-option { width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: 4px solid transparent; transition: transform 0.2s, border-color 0.2s; }
+        .skin-option:hover { transform: scale(1.1); }
+        .skin-option.selected { border-color: #ffffff; transform: scale(1.15); box-shadow: 0 0 15px rgba(255,255,255,0.6); }
+
+        /* Boutons */
+        .btn { padding: 15px 40px; font-size: 20px; font-weight: bold; color: white; background: #0284c7; border: none; border-radius: 8px; cursor: pointer; transition: background 0.2s, transform 0.1s; }
+        .btn:hover { background: #0369a1; transform: translateY(-2px); }
+        .btn:active { transform: translateY(0); }
+
+        /* HUD en jeu */
+        #hud { position: absolute; top: 20px; left: 20px; font-size: 20px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); display: none; pointer-events: none; }
+        #hud span { color: #38bdf8; }
+
+        /* Écran Game Over caché par défaut */
+        #gameOverScreen { display: none; }
     </style>
 </head>
 <body>
 
-    <div id="ui">A.F.O.J | Éliminations: <span id="score">0</span></div>
+    <!-- HUD en jeu -->
+    <div id="hud">A.F.O.J | Éliminations: <span id="score">0</span></div>
+
+    <!-- Menu Principal -->
+    <div id="mainMenu" class="overlay">
+        <h1>A.F.O.J</h1>
+        <p>Sélectionne ton Skin et rejoins l'arène</p>
+        
+        <div class="skin-selector">
+            <div class="skin-option selected" style="background: #38bdf8;" data-color="#38bdf8"></div>
+            <div class="skin-option" style="background: #ec4899;" data-color="#ec4899"></div>
+            <div class="skin-option" style="background: #22c55e;" data-color="#22c55e"></div>
+            <div class="skin-option" style="background: #eab308;" data-color="#eab308"></div>
+            <div class="skin-option" style="background: #a855f7;" data-color="#a855f7"></div>
+        </div>
+
+        <button class="btn" id="startBtn">LANCER LA PARTIE</button>
+    </div>
+
+    <!-- Écran Game Over -->
+    <div id="gameOverScreen" class="overlay">
+        <h1 style="color: #ef4444; text-shadow: 0 0 20px rgba(239, 68, 68, 0.5);">GAME OVER</h1>
+        <p>Tu t'es fait éliminer par les bots.</p>
+        <h2 style="margin-bottom: 40px;">Score final : <span id="finalScore" style="color: #eab308;">0</span></h2>
+        <button class="btn" id="restartBtn">REJOUER</button>
+    </div>
+
     <canvas id="gameCanvas"></canvas>
 
     <script>
@@ -22,60 +70,101 @@
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
+        // États du jeu : 'MENU', 'PLAYING', 'GAMEOVER'
+        let gameState = 'MENU';
         let score = 0;
+        let spawnInterval = null;
 
         // Le Joueur
         const player = {
             x: canvas.width / 2,
             y: canvas.height / 2,
             radius: 15,
-            color: '#3498db',
+            color: '#38bdf8',
             speed: 4
         };
 
-        // Tableaux pour stocker les éléments mobiles
-        const bullets = [];
-        const enemies = [];
+        // Tableaux de jeu
+        let bullets = [];
+        let enemies = [];
 
         // Gestion des touches clavier
         const keys = {};
         window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
         window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
-        // --- SYSTÈME DE TIR ---
-        // Fonction pour créer une balle vers une cible (souris ou tap)
+        // Sélection de Skin
+        const skinOptions = document.querySelectorAll('.skin-option');
+        skinOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                skinOptions.forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                player.color = option.getAttribute('data-color');
+            });
+        });
+
+        // Gestionnaires de boutons
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', returnToMenu);
+
+        function startGame() {
+            document.getElementById('mainMenu').style.display = 'none';
+            document.getElementById('gameOverScreen').style.display = 'none';
+            document.getElementById('hud').style.display = 'block';
+            
+            // Réinitialisation des données
+            score = 0;
+            document.getElementById('score').innerText = score;
+            bullets = [];
+            enemies = [];
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            gameState = 'PLAYING';
+
+            // Lancement du spawn des ennemis
+            if (spawnInterval) clearInterval(spawnInterval);
+            spawnInterval = setInterval(spawnEnemy, 1200);
+        }
+
+        function returnToMenu() {
+            document.getElementById('gameOverScreen').style.display = 'none';
+            document.getElementById('mainMenu').style.display = 'flex';
+            gameState = 'MENU';
+        }
+
         function shoot(targetX, targetY) {
+            if (gameState !== 'PLAYING') return;
             const angle = Math.atan2(targetY - player.y, targetX - player.x);
             bullets.push({
                 x: player.x,
                 y: player.y,
                 radius: 4,
-                color: '#f1c40f',
+                color: '#fde047',
                 velocity: {
-                    x: Math.cos(angle) * 8,
-                    y: Math.sin(angle) * 8
+                    x: Math.cos(angle) * 9,
+                    y: Math.sin(angle) * 9
                 }
             });
         }
 
-        // Tir au clic sur PC
+        // Contrôles de tir (Souris + Tactile)
         window.addEventListener('click', e => {
-            shoot(e.clientX, e.clientY);
+            if(e.target.tagName !== 'BUTTON' && !e.target.classList.contains('skin-option')) {
+                shoot(e.clientX, e.clientY);
+            }
         });
 
-        // Tir et déplacement simultané sur Mobile (Android)
         window.addEventListener('touchstart', e => {
-            const touch = e.touches[0];
-            // Si on touche l'écran, on tire vers la zone touchée
-            shoot(touch.clientX, touch.clientY);
-            // Et on déplace brièvement le joueur vers cette direction pour simuler un joystick
-            player.x = touch.clientX;
-            player.y = touch.clientY;
+            if(e.target.tagName !== 'BUTTON' && !e.target.classList.contains('skin-option')) {
+                const touch = e.touches[0];
+                shoot(touch.clientX, touch.clientY);
+                player.x = touch.clientX;
+                player.y = touch.clientY;
+            }
         });
 
-        // --- SYSTÈME D'ENNEMIS (BOTS) ---
         function spawnEnemy() {
-            // Apparition aléatoire sur les bords de l'écran
+            if (gameState !== 'PLAYING') return;
             let x, y;
             if (Math.random() < 0.5) {
                 x = Math.random() < 0.5 ? 0 : canvas.width;
@@ -89,46 +178,45 @@
                 x: x,
                 y: y,
                 radius: 12,
-                color: '#e74c3c',
-                speed: 1.5 + Math.random() * 1.5 // Vitesses variables
+                color: '#ef4444',
+                speed: 1.8 + Math.random() * 1.5
             });
         }
 
-        // Apparition d'un ennemi toutes les 1.5 secondes
-        setInterval(spawnEnemy, 1500);
-
-        // --- LOGIQUE DU JEU (MISE À JOUR) ---
         function update() {
-            // Déplacements ZQSD / Flèches
+            if (gameState !== 'PLAYING') return;
+
+            // Déplacements
             if (keys['z'] || keys['w'] || keys['arrowup']) player.y -= player.speed;
             if (keys['s'] || keys['arrowdown']) player.y += player.speed;
             if (keys['q'] || keys['a'] || keys['arrowleft']) player.x -= player.speed;
             if (keys['d'] || keys['arrowright']) player.x += player.speed;
 
-            // Mise à jour des balles
+            // Limites arène
+            if (player.x < player.radius) player.x = player.radius;
+            if (player.x > canvas.width - player.radius) player.x = canvas.width - player.radius;
+            if (player.y < player.radius) player.y = player.radius;
+            if (player.y > canvas.height - player.radius) player.y = canvas.height - player.radius;
+
+            // Balles
             bullets.forEach((bullet, index) => {
                 bullet.x += bullet.velocity.x;
                 bullet.y += bullet.velocity.y;
-
-                // Supprimer les balles hors écran pour optimiser les performances
                 if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
                     bullets.splice(index, 1);
                 }
             });
 
-            // Mise à jour des ennemis
+            // Ennemis
             enemies.forEach((enemy, eIndex) => {
-                // Les ennemis traquent le joueur (IA simple)
                 const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
                 enemy.x += Math.cos(angle) * enemy.speed;
                 enemy.y += Math.sin(angle) * enemy.speed;
 
-                // Gestion des collisions Balle / Ennemi
+                // Collisions Balle / Ennemi
                 bullets.forEach((bullet, bIndex) => {
                     const dist = Math.hypot(bullet.x - enemy.x, bullet.y - enemy.y);
-                    // Si la distance est inférieure à la somme des rayons, il y a impact
                     if (dist - enemy.radius - bullet.radius < 1) {
-                        // Supprimer l'ennemi et la balle
                         enemies.splice(eIndex, 1);
                         bullets.splice(bIndex, 1);
                         score++;
@@ -136,44 +224,44 @@
                     }
                 });
 
-                // Fin de partie si un ennemi touche le joueur
+                // Collision Ennemi / Joueur -> Game Over
                 const distPlayer = Math.hypot(player.x - enemy.x, player.y - enemy.y);
                 if (distPlayer - enemy.radius - player.radius < 1) {
-                    alert("GAME OVER ! Tu as fait " + score + " éliminations.");
-                    score = 0;
-                    document.getElementById('score').innerText = score;
-                    enemies.length = 0; // Vide la carte
-                    player.x = canvas.width / 2;
-                    player.y = canvas.height / 2;
+                    gameState = 'GAMEOVER';
+                    clearInterval(spawnInterval);
+                    document.getElementById('hud').style.display = 'none';
+                    document.getElementById('finalScore').innerText = score;
+                    document.getElementById('gameOverScreen').style.display = 'flex';
                 }
             });
         }
 
-        // --- RENDU GRAPHIQUE ---
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Dessiner le Joueur
-            ctx.fillStyle = player.color;
-            ctx.beginPath();
-            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Dessiner les Balles
-            bullets.forEach(bullet => {
-                ctx.fillStyle = bullet.color;
+            if (gameState === 'PLAYING') {
+                // Joueur
+                ctx.fillStyle = player.color;
                 ctx.beginPath();
-                ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
+                ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
                 ctx.fill();
-            });
 
-            // Dessiner les Ennemis
-            enemies.forEach(enemy => {
-                ctx.fillStyle = enemy.color;
-                ctx.beginPath();
-                ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
-                ctx.fill();
-            });
+                // Balles
+                bullets.forEach(bullet => {
+                    ctx.fillStyle = bullet.color;
+                    ctx.beginPath();
+                    ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                // Ennemis
+                enemies.forEach(enemy => {
+                    ctx.fillStyle = enemy.color;
+                    ctx.beginPath();
+                    ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
         }
 
         function gameLoop() {
@@ -184,7 +272,6 @@
 
         gameLoop();
 
-        // Ajustement si l'écran change de taille (rotation mobile)
         window.addEventListener('resize', () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
